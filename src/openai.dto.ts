@@ -1,5 +1,6 @@
 export interface ChatRequestDto {
   prompt: string;
+  timestamp: string;
 }
 
 export interface ChatResponseDto {
