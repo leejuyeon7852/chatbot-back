@@ -132,11 +132,23 @@ export class AppService {
           const chunks = this.splitDocument(content, 600);
           
           for (const [index, chunk] of chunks.entries()) {
+            if (!chunk) {
+              this.logger.error(`loadAndIndexDocuments: chunk is undefined (file: ${file}, index: ${index})`);
+              continue;
+            }
             // 각 청크에 대한 임베딩 생성
             const embedding = await this.createEmbedding(chunk);
             
             // Redis에 저장
             const docKey = `doc:${path.basename(file, '.txt')}:${index}`;
+            if (!docKey) {
+              this.logger.error('addVectorData: docKey is undefined');
+              continue;
+            }
+            if (!embedding) {
+              this.logger.error('addVectorData: embedding is undefined');
+              continue;
+            }
             await this.redisService.addVectorData(docKey, embedding, chunk);
             
             this.logger.debug(`Indexed chunk ${index + 1}/${chunks.length} of ${file}`);
@@ -184,7 +196,14 @@ export class AppService {
   }
 
   private async saveChatHistory(conversationId: string, chatHistory: Array<{ role: string; content: string }>): Promise<void> {
-    this.logger.debug(`Saving chat history - Conversation ID: ${conversationId}, Messages count: ${chatHistory.length}`);
+    if (!conversationId) {
+      this.logger.error('saveChatHistory: conversationId is undefined');
+      throw new Error('conversationId is undefined');
+    }
+    if (!chatHistory) {
+      this.logger.error('saveChatHistory: chatHistory is undefined');
+      throw new Error('chatHistory is undefined');
+    }
     await this.redisService.set(conversationId, JSON.stringify(chatHistory));
     this.logger.debug(`Chat history saved successfully - Conversation ID: ${conversationId}`);
   }

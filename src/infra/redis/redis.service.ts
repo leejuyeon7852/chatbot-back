@@ -55,14 +55,24 @@ export class RedisService implements OnModuleDestroy {
 
   // 핵심 로직 - 내가 만든 문서를 redis에 벡터 임베딩
   async addVectorData(key: string, vector: number[], text: string): Promise<void> {
+    if (!text || typeof text !== 'string') {
+      this.logger.warn(`⚠️ text 값이 유효하지 않음: ${key}`);
+      return;
+    }
+  
+    if (!Array.isArray(vector) || vector.length !== 1536) {
+      this.logger.warn(`⚠️ vector 값이 유효하지 않음: ${key}`);
+      return;
+    }
+  
     try {
       await this.redis.json.set(key, '$', {
-        text: text,
-        vector: vector
+        text,
+        vector,
       });
-      this.logger.debug(`데이터 저장 완료: ${key}`);
+      this.logger.debug(`✅ 데이터 저장 완료: ${key}`);
     } catch (e) {
-      this.logger.error(`데이터 저장 중 오류 (key: ${key}):`, e);
+      this.logger.error(`❌ Redis 저장 오류 (key: ${key})`, e);
       throw e;
     }
   }

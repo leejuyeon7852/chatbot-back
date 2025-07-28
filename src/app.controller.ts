@@ -1,46 +1,37 @@
 import { Controller, Post, Body } from '@nestjs/common';
 import { AppService } from './app.service';
-import { ChatRequestDto } from './openai.dto';
+import { ChatRequestDto, ChatResponseDto } from './openai.dto';
 
 @Controller('openai')
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
-  @Post('/chat')
-  async chat(@Body() body: ChatRequestDto) {
-    const { prompt, timestamp } = body;
-    if (!prompt || !timestamp) {
-      return { success: false, message: 'prompt와 timestamp 값이 필요합니다.' };
-    }
-    const result = await this.appService.generateText(body);
-    return { success: true, message: result };
+  async onModuleInit() {
+    const ragDirectory = 'src/rag';
+    await this.appService.initializeRAGIndex(ragDirectory);
   }
 
-  @Post('/chat-rag')
-  async chatRAG(@Body() body: ChatRequestDto) {
-    const { prompt, timestamp } = body;
-    if (!prompt || !timestamp) {
-      return { success: false, message: 'prompt와 timestamp 값이 필요합니다.' };
+  @Post('chat')
+  async chat(@Body() chatRequest: ChatRequestDto): Promise<ChatResponseDto> {
+    try {
+      const response = await this.appService.generateText(chatRequest);
+      return { success: true, message: response };
+    } catch (error) {
+      return { success: false, message: error.message };
     }
-    const result = await this.appService.generateTextWithRAG(body);
-    return { success: true, message: result };
   }
 
-  @Post('/rag/init')
-  async initializeRAG(@Body('directoryPath') directoryPath: string) {
-    if (!directoryPath) {
-      return { success: false, message: 'directoryPath 값이 필요합니다.' };
-    }
-    await this.appService.initializeRAGIndex(directoryPath);
-    return { success: true, message: 'RAG 인덱스 초기화 완료' };
+  @Post('rag')
+  async generateTextWithRAG(@Body() chatRequestBody: ChatRequestDto): Promise<ChatResponseDto> {
+    const answer = await this.appService.generateTextWithRAG(chatRequestBody);
+    const response: ChatResponseDto = { success: true, message: answer };
+    return response;
   }
 
-  @Post('/rag/reset')
-  async resetRAG(@Body('directoryPath') directoryPath: string) {
-    if (!directoryPath) {
-      return { success: false, message: 'directoryPath 값이 필요합니다.' };
-    }
-    await this.appService.resetRAGSystem(directoryPath);
-    return { success: true, message: 'RAG 시스템 초기화 완료' };
+  @Post('reset-rag')
+  async resetRAG() {
+    const ragDirectory = 'src/rag';
+    await this.appService.resetRAGSystem(ragDirectory);
+    return { message: 'RAG 시스템이 성공적으로 초기화되었습니다.' };
   }
 }
